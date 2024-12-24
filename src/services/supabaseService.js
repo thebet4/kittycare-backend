@@ -29,12 +29,15 @@ const {
   updateUserPassword,
   deletePasswordResetToken,
   resetPasswordForEmail,
+  signInWithOTP,
+  verifyOTPFromSupabase,
 } = require("./supabaseConnection");
 const { JWT_SECRET } = require("../config/config");
 const openaiService = require('./openaiService');
 const { emailTransfer, getSubscriptionCancelTemplate } = require('../config/email');
 const { getSignUpConfirmationHtmlTemplate, getResetPasswordHtmlTemplate, getSubscriptionSuccessTemplate } = require('../config/email');
 const { createEventInKlaviyo, createUserInKlaviyo } = require("./klaviyoConnection");
+const { supabase } = require('./supabaseConnection');
 
 const signupUser = async (first_name, last_name, email, password, phone_number) => {
   try {
@@ -63,8 +66,6 @@ const signupUser = async (first_name, last_name, email, password, phone_number) 
       subject: "User Created Successfully",
       html: getSignUpConfirmationHtmlTemplate(token),
     };
-
-    // console.log(mailOptions);
 
     // await emailTransfer.sendMail(mailOptions);
     // console.log("Confirmation email sent successfully");
@@ -101,7 +102,7 @@ const signinUser = async (email, password) => {
   const full_name = `${user.first_name} ${user.last_name}`;
   const expiresIn = "1h";
   const token = jwt.sign({ userId: user.id, email: user.email, full_name: full_name }, JWT_SECRET, { expiresIn });
-  
+
   await createEventInKlaviyo('login', email);
 
   return { token, expiresIn };
@@ -163,7 +164,7 @@ const deleteSubscription = async (subscriptionId, userId) => {
       return { success: false, error: "User not found", status: 404 };
     }
 
-    const username = `${user.first_name} ${user.last_name}`;
+    const username = `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
     const subscription = await getSubscriptionByUserId(userId);
     if (!subscription) {
       return { success: false, error: "Subscription not found", status: 404 };
@@ -238,15 +239,20 @@ const getCats = async (userId) => {
   }
 };
 
-const createCat = async (userId, catData) => {
+const getCatById = async (userId, catId) => {
+  try {
+    const cat = await getCatByUserId(userId, catId);
+    return cat !== null ? cat : { message: "No cat found for this user." };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const createCat = async (userId, userEmail, catData) => {
   try {
     const cat = await createCatByUserId(userId, catData);
-    const user = await findUserById(userId); // Assuming this function retrieves user details
-    if (!user) {
-      return { success: false, error: "User not found", status: 404 };
-    }
 
-    await createEventInKlaviyo('Created the cat', user.email);
+    await createEventInKlaviyo('Created the cat', userEmail);
     console.log("Created cat event in klaviyo");
     return cat;
   } catch (error) {
@@ -489,6 +495,83 @@ const resetPassword = async (token, newPassword) => {
   return { success: true, message: "Password has been reset" };
 };
 
+const signinWithOTP = async (email) => {
+  try {
+    const { data, error } = await signInWithOTP(email);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    await createEventInKlaviyo('Requested OTP Login', email);
+    return { data };
+  } catch (error) {
+    console.error('Error in signinWithOTP:', error);
+    throw error;
+  }
+};
+
+const verifyOTP = async (email, token, type) => {
+  try {
+    const { data, error } = await verifyOTPFromSupabase(email, token, type);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    await createEventInKlaviyo('Verified OTP', email);
+    return data;
+  } catch (error) {
+    console.error('Error in verifyOTP:', error);
+    throw error;
+  }
+};
+
+const signupWithOTP = async (email, first_name, last_name, phone_number) => {
+  try {
+    // First create the user in your database
+    const user = await createUserInDatabase(first_name, last_name, email, null, phone_number);
+
+    if (!user) {
+      return { error: 'Failed to create user' };
+    }
+
+    // Then send the OTP with user metadata
+    const { data, error } = await signInWithOTP(email, {
+      shouldCreateUser: true,
+      data: {
+        first_name,
+        last_name,
+        phone_number
+      }
+    });
+
+    const tokenPayload = {
+      userId: user.id,
+      email: email,
+      full_name: `${first_name} ${last_name}`,
+    };
+    const tokenOptions = { expiresIn: "1h" };
+    const token = jwt.sign(tokenPayload, JWT_SECRET, tokenOptions);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    try {
+      await createEventInKlaviyo('Signed Up with OTP', email);
+      await createUserInKlaviyo({ email, first_name, last_name, phone_number });
+    } catch (error) {
+      console.error('Error in create event in klaviyo:', error);
+    }
+
+    return { token, data };
+  } catch (error) {
+    console.error('Error in signupWithOTP:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   signupUser,
   signinUser,
@@ -514,4 +597,8 @@ module.exports = {
   uploadPhoto,
   requestPasswordReset,
   resetPassword,
+  signinWithOTP,
+  verifyOTP,
+  signupWithOTP,
+  getCatById
 };

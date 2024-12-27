@@ -51,6 +51,9 @@ const getPayPalListProducts = async (req, res) => {
     try {
         const result = await paypalService.getPayPalListProducts();
 
+        console.log("Paypal get products", result);
+        
+
         if (!result.success) {
             return res.status(400).json({ error: result.message })
         }        

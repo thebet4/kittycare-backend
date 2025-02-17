@@ -154,6 +154,8 @@ const deleteSubscription = async (subscriptionId, userId) => {
     // Define the cancellation date (current date only, in YYYY-MM-DD format)
     const endDate = new Date().toISOString().split("T")[0]; // Extracts just the date part
     const user = await findUserById(userId); // Assuming this function retrieves user details
+    console.log("userId", userId);
+    console.log("user", user);
     if (!user) {
       return { success: false, error: "User not found", status: 404 };
     }

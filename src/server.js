@@ -4,12 +4,14 @@ const cors = require('cors');
 const openaiRoutes = require('./routes/openaiRoutes');
 const supabaseRoutes = require('./routes/supabaseRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const oauthRoutes = require('./routes/oathRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/oauth', oauthRoutes)
 app.use('/api/openai', openaiRoutes);
 app.use('/api/supabase', supabaseRoutes);
 app.use('/api/payments', paymentRoutes);

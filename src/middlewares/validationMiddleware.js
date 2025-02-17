@@ -448,6 +448,21 @@ const validateSignupOTP = (req, res, next) => {
     next();
 };
 
+const googleOAuthSchema = Joi.object({
+    accessToken: Joi.string().required().messages({
+        'any.required': 'accessToken is required'
+    })
+});
+
+const validateGoogleOAuth = (req, res, next) => {
+    const { error } = googleOAuthSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errors = error.details.map(detail => detail.message);
+        return res.status(400).json({ errors });
+    }
+    next();
+}
+
 module.exports = {
     validateInput,
     validateSignup,
@@ -465,5 +480,6 @@ module.exports = {
     validateRecommendations,
     validateSigninOTP,
     validateVerifyOTP,
-    validateSignupOTP
+    validateSignupOTP,
+    validateGoogleOAuth
 };

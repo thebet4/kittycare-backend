@@ -8,10 +8,12 @@ const oauthRoutes = require('./routes/oathRoutes');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: '*',
+}));
 app.use(express.json());
 
-app.use('/api/oauth', cors({origin: '*'}), oauthRoutes)
+app.use('/api/oauth', oauthRoutes)
 app.use('/api/openai', openaiRoutes);
 app.use('/api/supabase', supabaseRoutes);
 app.use('/api/payments', paymentRoutes);

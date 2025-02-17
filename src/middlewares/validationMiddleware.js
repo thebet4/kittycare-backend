@@ -315,16 +315,7 @@ const testPaymentSchema = Joi.object({
     'number.max': 'Amount cannot exceed 9999.99',
     'string.valid': 'Currency must be one of: usd, eur, gbp'
 });
-
-const validateTestPayment = (req, res, next) => {
-    const { error } = testPaymentSchema.validate(req.body, { abortEarly: false });
-    if (error) {
-        const errors = error.details.map(detail => detail.message);
-        return res.status(400).json({ errors });
-    }
-    next();
-};
-
+ 
 const recommendationsSchema = Joi.object({
     name: Joi.string().messages(),
     goals: Joi.string().required().messages({
@@ -390,36 +381,7 @@ const signinOTPSchema = Joi.object({
         'any.required': 'Email is required'
     })
 });
-
-const verifyOTPSchema = Joi.object({
-    email: Joi.string().email().required().messages({
-        'string.email': 'Invalid email format',
-        'any.required': 'Email is required'
-    }),
-    token: Joi.string().required().messages({
-        'any.required': 'Token is required'
-    }),
-    type: Joi.string().valid('email').required()
-});
-
-const signupOTPSchema = Joi.object({
-    email: Joi.string().email().required().messages({
-        'string.email': 'Invalid email format',
-        'any.required': 'Email is required'
-    }),
-    first_name: Joi.string().trim().required().messages({
-        'string.base': 'First name must be a string',
-        'string.empty': 'First name cannot be empty',
-        'any.required': 'First name is required'
-    }),
-    last_name: Joi.string().trim().required().messages({
-        'string.base': 'Last name must be a string',
-        'string.empty': 'Last name cannot be empty',
-        'any.required': 'Last name is required'
-    }),
-    phone_number: Joi.string().optional(),
-    otp: Joi.string().optional()
-});
+ 
 
 const validateSigninOTP = (req, res, next) => {
     const { error } = signinOTPSchema.validate(req.body, { abortEarly: false });
@@ -438,15 +400,7 @@ const validateVerifyOTP = (req, res, next) => {
     }
     next();
 };
-
-const validateSignupOTP = (req, res, next) => {
-    const { error } = signupOTPSchema.validate(req.body, { abortEarly: false });
-    if (error) {
-        const errors = error.details.map(detail => detail.message);
-        return res.status(400).json({ errors });
-    }
-    next();
-};
+ 
 
 module.exports = {
     validateInput,
